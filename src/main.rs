@@ -1,12 +1,9 @@
-mod access_management;
+mod gpio_pins;
 
-use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
-use std::sync::{Arc, Mutex};
-
+use crate::gpio_pins::GpioPins;
 use ctrlc;
-use rppal::gpio::{Gpio, Trigger};
-
-use access_management::register_access_management_handlers;
+use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
+use std::sync::Arc;
 
 fn main() {
     // Handling Ctrl-C
@@ -18,20 +15,13 @@ fn main() {
     })
     .unwrap();
 
-    // Setting up GPIO
-    let gpio = Gpio::new().unwrap();
+    // Setting up GPIO pins
+    let mut gpio_pins = GpioPins::new();
 
-    // Call the function to handle the opening/exit barriers
-    register_access_management_handlers(&gpio);
+    // Registering access management handlers
+    gpio_pins.register_access_management_handlers();
 
-    //let space_address_1 = Arc::new(Mutex::new(gpio.get(22).unwrap().into_output_low()));
-    //let space_address_2 = Arc::new(Mutex::new(gpio.get(26).unwrap().into_output_low()));
-    //let space_address_3 = Arc::new(Mutex::new(gpio.get(19).unwrap().into_output_low()));
-
-    //let space_sensor_1 = Arc::new(Mutex::new(gpio.get(18).unwrap().into_input_pulldown()));
-
-    //let closed_signal = Arc::new(Mutex::new(gpio.get(27).unwrap().into_output_low()));
-
+    println!("Program running");
 
     // Waiting for Ctrl-C
     while running.load(SeqCst) {}
