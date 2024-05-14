@@ -7,7 +7,7 @@ edition = "2021"
 chrono = "0.4.38"
 ctrlc = "3.4.4"
 global_counter = "0.2.2"
-#openssl = { version = "0.10.64", features = ["vendored"] }
+openssl = { version = "0.10.64", features = ["vendored"] }
 rppal = "0.17.1"
 rust_socketio = { version = "0.6.0", features = ["async"] }
 serde = { version = "1.0.201", features = ["derive"] }
