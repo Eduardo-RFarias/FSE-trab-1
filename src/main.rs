@@ -3,8 +3,11 @@ mod model;
 use crate::model::{Car, ParkingLot};
 use ctrlc;
 use rppal::gpio::{Gpio, Level, Trigger};
+use rust_socketio::ClientBuilder;
 use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 
 fn main() {
     // Handling Ctrl-C
@@ -31,6 +34,25 @@ fn main() {
     let space_sensor = Arc::new(Mutex::new(gpio.get(18).unwrap().into_input_pulldown()));
     let closed_signal = Arc::new(Mutex::new(gpio.get(27).unwrap().into_output_low()));
 
+    // Setting up the socket.io client
+    let closed_signal_clone_1 = closed_signal.clone();
+    let closed_signal_clone_2 = closed_signal.clone();
+    let client = Arc::new(Mutex::new(
+        ClientBuilder::new("http://localhost:3000")
+            .on("connect", |_, _| println!("Connected to the server"))
+            .on("disconnect", |_, _| {
+                println!("Disconnected from the server")
+            })
+            .on("close_parking_lot", move |_, _| {
+                closed_signal_clone_1.lock().unwrap().set_high();
+            })
+            .on("open_parking_lot", move |_, _| {
+                closed_signal_clone_2.lock().unwrap().set_low();
+            })
+            .connect()
+            .unwrap(),
+    ));
+
     // Creating the parking lot
     let parking_lot = Arc::new(Mutex::new(ParkingLot::new()));
 
@@ -49,18 +71,14 @@ fn main() {
     let space_address_2_clone = space_address_2.clone();
     let space_address_3_clone = space_address_3.clone();
     let space_sensor_clone = space_sensor.clone();
+    let client_clone = client.clone();
     entry_close_signal
         .set_async_interrupt(Trigger::RisingEdge, move |_| {
-            // Locking the resources
-            let mut inner_entry_engine = entry_engine_clone.lock().unwrap();
-            let mut inner_parking_lot = parking_lot_clone.lock().unwrap();
-            let mut inner_space_address_1 = space_address_1_clone.lock().unwrap();
-            let mut inner_space_address_2 = space_address_2_clone.lock().unwrap();
-            let mut inner_space_address_3 = space_address_3_clone.lock().unwrap();
-            let inner_space_sensor = space_sensor_clone.lock().unwrap();
-
             // Turn off the entry engine
-            inner_entry_engine.set_low();
+            entry_engine_clone.lock().unwrap().set_low();
+
+            // Wait for the car to find a parking space
+            thread::sleep(Duration::from_secs(5));
 
             // after the entry is closed, scan the parking lot to check if a car entered in a parking space
             let mut car_inserted: Option<Car> = None;
@@ -68,15 +86,18 @@ fn main() {
             for address in 0..8 {
                 let (address_1, address_2, address_3) = convert_address_to_levels(address as u8);
 
-                inner_space_address_1.write(address_1);
-                inner_space_address_2.write(address_2);
-                inner_space_address_3.write(address_3);
+                space_address_1_clone.lock().unwrap().write(address_1);
+                space_address_2_clone.lock().unwrap().write(address_2);
+                space_address_3_clone.lock().unwrap().write(address_3);
 
-                let parking_space = &mut inner_parking_lot.spaces[address];
+                // Wait the sensor to stabilize
+                thread::sleep(Duration::from_millis(50));
+
+                let parking_space = &mut parking_lot_clone.lock().unwrap().spaces[address];
 
                 // if the space is occupied and there was no car in the parking space database,
                 // then the car entered in the parking space
-                if inner_space_sensor.is_high() && parking_space.car.is_none() {
+                if space_sensor_clone.lock().unwrap().is_high() && parking_space.car.is_none() {
                     let car = Car::new();
                     parking_space.car = Some(car.clone());
                     car_inserted = Some(car);
@@ -86,68 +107,68 @@ fn main() {
             // if a car entered in a parking space, send a signal to the server
             if let Some(car) = car_inserted {
                 // send signal to server
-                println!("{:?}", serde_json::to_string(&car).unwrap());
-            } else {
-                println!("No car inserted");
+                client_clone
+                    .lock()
+                    .unwrap()
+                    .emit("car_inserted", serde_json::to_string(&car).unwrap())
+                    .unwrap();
             }
         })
         .unwrap();
 
     // Callback to turn on the exit engine when the exit open signal is triggered
     let exit_engine_clone = exit_engine.clone();
-    exit_open_signal
-        .set_async_interrupt(Trigger::RisingEdge, move |_| {
-            exit_engine_clone.lock().unwrap().set_high();
-        })
-        .unwrap();
-
-    // Callback to turn off the exit engine when the exit close signal is triggered
-    let exit_engine_clone = exit_engine.clone();
     let parking_lot_clone = parking_lot.clone();
     let space_address_1_clone = space_address_1.clone();
     let space_address_2_clone = space_address_2.clone();
     let space_address_3_clone = space_address_3.clone();
     let space_sensor_clone = space_sensor.clone();
-    exit_close_signal
+    let client_clone = client.clone();
+    exit_open_signal
         .set_async_interrupt(Trigger::RisingEdge, move |_| {
-            // Locking the resources
-            let mut inner_exit_engine = exit_engine_clone.lock().unwrap();
-            let mut inner_parking_lot = parking_lot_clone.lock().unwrap();
-            let mut inner_space_address_1 = space_address_1_clone.lock().unwrap();
-            let mut inner_space_address_2 = space_address_2_clone.lock().unwrap();
-            let mut inner_space_address_3 = space_address_3_clone.lock().unwrap();
-            let inner_space_sensor = space_sensor_clone.lock().unwrap();
+            // Turn on the exit engine
+            exit_engine_clone.lock().unwrap().set_high();
 
-            // Turn off the exit engine
-            inner_exit_engine.set_low();
-
-            // after the exit is closed, scan the parking lot to check if a car exited from a parking space
+            // after the exit is opened, scan the parking lot to check if a car left a parking space
             let mut car_removed: Option<Car> = None;
 
             for address in 0..8 {
                 let (address_1, address_2, address_3) = convert_address_to_levels(address as u8);
 
-                inner_space_address_1.write(address_1);
-                inner_space_address_2.write(address_2);
-                inner_space_address_3.write(address_3);
+                space_address_1_clone.lock().unwrap().write(address_1);
+                space_address_2_clone.lock().unwrap().write(address_2);
+                space_address_3_clone.lock().unwrap().write(address_3);
 
-                let parking_space = &mut inner_parking_lot.spaces[address];
+                // Wait the sensor to stabilize
+                thread::sleep(Duration::from_millis(50));
 
-                // if the space is occupied and there was a car in the parking space database,
-                // then the car exited from the parking space
-                if inner_space_sensor.is_high() && parking_space.car.is_some() {
+                let parking_space = &mut parking_lot_clone.lock().unwrap().spaces[address];
+
+                // if the space is empty and there was a car in the parking space database,
+                // then the car left the parking space
+                if space_sensor_clone.lock().unwrap().is_low() && parking_space.car.is_some() {
                     let car = parking_space.car.take().unwrap();
                     car_removed = Some(car);
                 }
             }
 
-            // if a car exited from a parking space, send a signal to the server
+            // if a car left the parking space, send a signal to the server
             if let Some(car) = car_removed {
                 // send signal to server
-                println!("{:?}", serde_json::to_string(&car).unwrap());
-            } else {
-                println!("No car removed");
+                client_clone
+                    .lock()
+                    .unwrap()
+                    .emit("car_removed", serde_json::to_string(&car).unwrap())
+                    .unwrap();
             }
+        })
+        .unwrap();
+
+    // Callback to turn off the exit engine when the exit close signal is triggered
+    let exit_engine_clone = exit_engine.clone();
+    exit_close_signal
+        .set_async_interrupt(Trigger::RisingEdge, move |_| {
+            exit_engine_clone.lock().unwrap().set_low();
         })
         .unwrap();
 
