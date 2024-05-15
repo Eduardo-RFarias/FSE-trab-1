@@ -27,5 +27,8 @@ fn main() {
     // Keep the program running until running turns false
     println!("Program started");
     while running.load(SeqCst) {}
+
+    // Disconnecting the client
+    client.lock().unwrap().disconnect().unwrap();
     println!("Program terminated");
 }

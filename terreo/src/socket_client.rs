@@ -1,10 +1,17 @@
 use crate::gpio_pins::GpioPins;
-use crate::socket_operations::{CLOSING_PARKING_LOT, OPENING_PARKING_LOT, SERVER_URL};
+use crate::socket_operations::{
+    CLIENT_HEADER, CLOSING_PARKING_LOT, OPENING_PARKING_LOT, SERVER_URL,
+};
 use rust_socketio::{client::Client, ClientBuilder};
 use std::sync::{Arc, Mutex};
 
 pub fn new_client(gpio_pins: &GpioPins) -> Arc<Mutex<Client>> {
-    let mut client = ClientBuilder::new(SERVER_URL);
+    // Creating the client
+    let mut client = ClientBuilder::new(SERVER_URL)
+        .opening_header(CLIENT_HEADER.key, CLIENT_HEADER.value)
+        .reconnect(true)
+        .max_reconnect_attempts(10)
+        .reconnect_delay(1000, 10000);
 
     // Setting up the close parking lot signal
     client = set_close_parking_lot_signal(client, &gpio_pins);
