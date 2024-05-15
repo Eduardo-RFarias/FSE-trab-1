@@ -9,9 +9,8 @@ pub fn new_client(gpio_pins: &GpioPins) -> Arc<Mutex<Client>> {
     // Creating the client
     let mut client = ClientBuilder::new(SERVER_URL)
         .opening_header(CLIENT_HEADER.key, CLIENT_HEADER.value)
-        .reconnect(true)
-        .max_reconnect_attempts(10)
-        .reconnect_delay(1000, 10000);
+        .reconnect_on_disconnect(true)
+        .max_reconnect_attempts(10);
 
     // Setting up the close parking lot signal
     client = set_close_parking_lot_signal(client, &gpio_pins);

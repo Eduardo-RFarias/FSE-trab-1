@@ -54,15 +54,11 @@ async def car_arrived(sid: str, payload: dict):
     car = Car(id=await car_id.increment_and_get(), arrived_at=dto.timestamp)
     await parking_lot.park(car, floor, dto.parking_space)
 
-    print(f"Car {car.id} parked at {floor} floor parking space {dto.parking_space}")
-
     if parking_lot.is_full():
-        print("Parking lot is now full")
         async with lock:
             await sio.emit("close_parking_lot", room=client_id.name)
 
     if parking_lot.floors[floor].is_full():
-        print(f"{floor} floor is now full")
         async with lock:
             await sio.emit("close_floor", room=client_id.name)
 
@@ -85,17 +81,12 @@ async def car_departed(sid: str, payload: dict):
 
         fee = car.calculate_fee(dto.timestamp)
 
-        print(
-            f"Car {car.id} left from {floor} floor, space {dto.parking_space}.", end=" "
-        )
-        print(f"Fee: {fee}")
+        print(f"Car {car.id}'s fee is {fee}")
 
         if parking_lot_was_full:
-            print("Parking lot is no longer full")
             await sio.emit("open_parking_lot", room=client_id.name)
 
         if floor_was_full:
-            print(f"{floor} floor is no longer full")
             await sio.emit("open_floor", room=client_id.name)
 
 

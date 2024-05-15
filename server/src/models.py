@@ -1,6 +1,6 @@
 import asyncio
 from enum import Enum
-from typing import Any
+from typing import Union
 
 
 class ClientId(Enum):
@@ -22,11 +22,11 @@ class ClientId(Enum):
 
 class Clients:
     def __init__(self):
-        self.ground_floor: str | None = None
-        self.first_floor: str | None = None
-        self.second_floor: str | None = None
+        self.ground_floor: Union[str, None] = None
+        self.first_floor: Union[str, None] = None
+        self.second_floor: Union[str, None] = None
 
-    def get_client_id_from_sid(self, sid: str) -> ClientId | None:
+    def get_client_id_from_sid(self, sid: str) -> Union[ClientId, None]:
         if self.ground_floor == sid:
             return ClientId.GROUND_FLOOR
         if self.first_floor == sid:
@@ -36,7 +36,7 @@ class Clients:
 
         return None
 
-    def __getitem__(self, key: ClientId) -> str | None:
+    def __getitem__(self, key: ClientId) -> Union[str, None]:
         if key == ClientId.GROUND_FLOOR.value:
             return self.ground_floor
         elif key == ClientId.FIRST_FLOOR.value:
@@ -46,7 +46,7 @@ class Clients:
         else:
             raise KeyError(f"Invalid key {key}")
 
-    def __setitem__(self, key: ClientId, value: str | None):
+    def __setitem__(self, key: ClientId, value: Union[str, None]):
         if key == ClientId.GROUND_FLOOR:
             self.ground_floor = value
         elif key == ClientId.FIRST_FLOOR:
@@ -63,7 +63,8 @@ class Car:
         self.arrived_at = arrived_at
 
     def calculate_fee(self, left_at: int) -> float:
-        return (left_at - self.arrived_at) * 0.1
+        # 0.1$ per minute
+        return (left_at - self.arrived_at) // 60 * 0.1
 
 
 class ParkingSpaceType(Enum):
@@ -75,7 +76,7 @@ class ParkingSpaceType(Enum):
 class ParkingSpace:
     def __init__(self, space_type: ParkingSpaceType):
         self.space_type: ParkingSpaceType = space_type
-        self.car: Car | None = None
+        self.car: Union[Car, None] = None
 
     def park(self, car: Car):
         if self.car is not None:
