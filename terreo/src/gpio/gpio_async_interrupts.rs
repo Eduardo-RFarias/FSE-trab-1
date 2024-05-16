@@ -1,6 +1,6 @@
-use crate::gpio_pins::GpioPins;
+use crate::gpio::gpio_pins::GpioPins;
 use crate::model::{ParkingLot, ParkingSpaceModifiedPayload};
-use crate::socket_operations::{CAR_ARRIVED, CAR_DEPARTED};
+use crate::socket::socket_operations::{CAR_ARRIVED, CAR_DEPARTED};
 use chrono::Utc;
 use rppal::gpio::{Level, Trigger};
 use rust_socketio::client::Client;
@@ -185,7 +185,7 @@ fn configure_exit_close_signal(gpio_pins: &mut GpioPins) {
         .unwrap();
 }
 
-pub fn convert_address_to_levels(address: u8) -> (Level, Level, Level) {
+fn convert_address_to_levels(address: u8) -> (Level, Level, Level) {
     let address_1 = if address & 0b001 != 0 {
         Level::High
     } else {

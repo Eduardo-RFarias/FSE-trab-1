@@ -4,46 +4,62 @@ import socketio
 from aiohttp import web
 
 from .central_database import car_id, clients, parking_lot
+from .constants import (
+    CAR_ARRIVED_EVENT,
+    CAR_DEPARTED_EVENT,
+    CLIENT_ID_HEADER,
+    CLIENT_ID_HEADER_FROM_SOCKET,
+    CLOSE_FLOOR_EVENT,
+    CLOSE_PARKING_LOT_EVENT,
+    OPEN_FLOOR_EVENT,
+    OPEN_PARKING_LOT_EVENT,
+    ORDER_TO_CLOSE_FLOOR,
+    ORDER_TO_CLOSE_PARKING_LOT,
+    PARKING_LOT_STATE_EVENT,
+)
 from .models import Car, ClientId
-from .payloads import ParkingSpaceModifiedPayload
+from .payloads import CloseFloorPayload, ParkingSpaceModifiedPayload
 
-sio = socketio.AsyncServer()
+socket = socketio.AsyncServer()
 
-lock = asyncio.Lock()
+socket_lock = asyncio.Lock()
 
 
-@sio.event
+@socket.event
 async def connect(sid: str, environ: dict[str, str]):
-    x_client_id = environ.get("HTTP_X_CLIENT_ID")
+    x_client_id = environ.get(CLIENT_ID_HEADER_FROM_SOCKET)
 
     if x_client_id is None:
-        raise ValueError("Missing X-Client-Id header")
+        raise ValueError(f"Missing {CLIENT_ID_HEADER} header")
 
     client_id = ClientId.from_str(x_client_id)
 
-    async with lock:
-        clients[client_id] = sid
-        await sio.enter_room(sid, client_id.name)
+    await clients.set_item(client_id, sid)
 
-    print(f"connected {sid} as {client_id}")
+    async with socket_lock:
+        await socket.enter_room(sid, client_id.name)
+        print(f"connected {sid} as {client_id}")
+        await socket.emit(PARKING_LOT_STATE_EVENT, room=client_id.name)
 
 
-@sio.event
+@socket.event
 async def disconnect(sid):
-    client_id = clients.get_client_id_from_sid(sid)
+    client_id = await clients.get_client_id_from_sid(sid)
 
     if client_id is not None:
-        async with lock:
-            clients[client_id] = None
-            await sio.close_room(sid)
-            print(f"disconnected {sid} from {client_id}")
+        await clients.set_item(client_id, None)
+
+        async with socket_lock:
+            await socket.close_room(client_id.name)
+
+        print(f"disconnected {sid} from {client_id}")
     else:
         print(f"disconnected {sid}")
 
 
-@sio.event
+@socket.on(CAR_ARRIVED_EVENT)  # type: ignore
 async def car_arrived(sid: str, payload: dict):
-    client_id = clients.get_client_id_from_sid(sid)
+    client_id = await clients.get_client_id_from_sid(sid)
 
     if client_id is None:
         raise ValueError(f"Unknown client {sid}")
@@ -54,18 +70,18 @@ async def car_arrived(sid: str, payload: dict):
     car = Car(id=await car_id.increment_and_get(), arrived_at=dto.timestamp)
     await parking_lot.park(car, floor, dto.parking_space)
 
-    if parking_lot.is_full():
-        async with lock:
-            await sio.emit("close_parking_lot", room=client_id.name)
+    if await parking_lot.is_full():
+        async with socket_lock:
+            await socket.emit(CLOSE_PARKING_LOT_EVENT, room=client_id.name)
 
-    if parking_lot.floors[floor].is_full():
-        async with lock:
-            await sio.emit("close_floor", room=client_id.name)
+    if await parking_lot.is_floor_full(floor):
+        async with socket_lock:
+            await socket.emit(CLOSE_FLOOR_EVENT, room=client_id.name)
 
 
-@sio.event
+@socket.on(CAR_DEPARTED_EVENT)  # type: ignore
 async def car_departed(sid: str, payload: dict):
-    client_id = clients.get_client_id_from_sid(sid)
+    client_id = await clients.get_client_id_from_sid(sid)
 
     if client_id is None:
         raise ValueError(f"Unknown client {sid}")
@@ -73,22 +89,39 @@ async def car_departed(sid: str, payload: dict):
     floor = client_id.value
     dto = ParkingSpaceModifiedPayload.from_dict(payload)
 
-    async with lock:
-        parking_lot_was_full = parking_lot.is_full()
-        floor_was_full = parking_lot.floors[floor].is_full()
+    parking_lot_was_full = await parking_lot.is_full()
+    floor_was_full = await parking_lot.is_floor_full(floor)
 
-        car = await parking_lot.unpark(floor, dto.parking_space)
+    car = await parking_lot.unpark(floor, dto.parking_space)
 
-        fee = car.calculate_fee(dto.timestamp)
+    fee = car.calculate_fee(dto.timestamp)
 
-        print(f"Car {car.id}'s fee is {fee}")
+    print(f"Car {car._id}'s fee is {fee}")
 
-        if parking_lot_was_full:
-            await sio.emit("open_parking_lot", room=client_id.name)
+    if parking_lot_was_full:
+        async with socket_lock:
+            await socket.emit(OPEN_PARKING_LOT_EVENT, room=client_id.name)
 
-        if floor_was_full:
-            await sio.emit("open_floor", room=client_id.name)
+    if floor_was_full:
+        async with socket_lock:
+            await socket.emit(OPEN_FLOOR_EVENT, room=client_id.name)
+
+
+@socket.on(ORDER_TO_CLOSE_PARKING_LOT)  # type: ignore
+async def order_to_close_parking_lot(sid: str, payload: dict):
+    client_id = ClientId.GROUND_FLOOR
+
+    async with socket_lock:
+        await socket.emit(CLOSE_PARKING_LOT_EVENT, room=client_id.name)
+
+
+@socket.on(ORDER_TO_CLOSE_FLOOR)  # type: ignore
+async def order_to_close_floor(sid: str, payload: dict):
+    client_id = CloseFloorPayload.from_dict(payload).client_id
+
+    async with socket_lock:
+        await socket.emit(CLOSE_FLOOR_EVENT, room=client_id.name)
 
 
 app = web.Application()
-sio.attach(app)
+socket.attach(app)

@@ -1,4 +1,7 @@
+use crate::gpio::gpio_async_interrupts;
+use crate::model::ParkingLot;
 use rppal::gpio::{Gpio, InputPin, OutputPin};
+use rust_socketio::client::Client;
 use std::sync::{Arc, Mutex};
 
 pub struct GpioPins {
@@ -32,5 +35,13 @@ impl GpioPins {
             space_sensor: Arc::new(Mutex::new(gpio.get(18).unwrap().into_input_pulldown())),
             closed_signal: Arc::new(Mutex::new(gpio.get(27).unwrap().into_output_low())),
         }
+    }
+
+    pub fn setup_interrupts(
+        &mut self,
+        client: &Arc<Mutex<Client>>,
+        parking_lot: &Arc<Mutex<ParkingLot>>,
+    ) {
+        gpio_async_interrupts::configure(self, client, parking_lot)
     }
 }

@@ -1,12 +1,12 @@
-mod configure_graceful_shutdown;
-mod gpio_async_interrupts;
-mod gpio_pins;
+mod gpio;
 mod model;
-mod socket_client;
-mod socket_operations;
+mod socket;
+mod utils;
 
-use crate::gpio_pins::GpioPins;
+use crate::gpio::gpio_pins::GpioPins;
 use crate::model::ParkingLot;
+use crate::socket::socket_client;
+use crate::utils::configure_graceful_shutdown;
 use std::sync::atomic::Ordering::SeqCst;
 
 fn main() {
@@ -15,14 +15,14 @@ fn main() {
     // Setting up GPIO pins
     let mut gpio_pins = GpioPins::new();
 
-    // Setting up the socket.io client
-    let client = socket_client::new_client(&gpio_pins);
-
     // Creating the parking lot
     let parking_lot = ParkingLot::new();
 
+    // Setting up the socket.io client
+    let client = socket_client::new_client(&gpio_pins, &parking_lot);
+
     // Configuring the GPIO pins to handle interrupts
-    gpio_async_interrupts::configure(&mut gpio_pins, &client, &parking_lot);
+    gpio_pins.setup_interrupts(&client, &parking_lot);
 
     // Keep the program running until running turns false
     println!("Program started");

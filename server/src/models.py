@@ -22,49 +22,54 @@ class ClientId(Enum):
 
 class Clients:
     def __init__(self):
-        self.ground_floor: Union[str, None] = None
-        self.first_floor: Union[str, None] = None
-        self.second_floor: Union[str, None] = None
+        self._ground_floor: Union[str, None] = None
+        self._first_floor: Union[str, None] = None
+        self._second_floor: Union[str, None] = None
 
-    def get_client_id_from_sid(self, sid: str) -> Union[ClientId, None]:
-        if self.ground_floor == sid:
-            return ClientId.GROUND_FLOOR
-        if self.first_floor == sid:
-            return ClientId.FIRST_FLOOR
-        if self.second_floor == sid:
-            return ClientId.SECOND_FLOOR
+        self.lock = asyncio.Lock()
 
-        return None
+    async def get_client_id_from_sid(self, sid: str) -> Union[ClientId, None]:
+        async with self.lock:
+            if self._ground_floor == sid:
+                return ClientId.GROUND_FLOOR
+            if self._first_floor == sid:
+                return ClientId.FIRST_FLOOR
+            if self._second_floor == sid:
+                return ClientId.SECOND_FLOOR
 
-    def __getitem__(self, key: ClientId) -> Union[str, None]:
-        if key == ClientId.GROUND_FLOOR.value:
-            return self.ground_floor
-        elif key == ClientId.FIRST_FLOOR.value:
-            return self.first_floor
-        elif key == ClientId.SECOND_FLOOR.value:
-            return self.second_floor
-        else:
-            raise KeyError(f"Invalid key {key}")
+            return None
 
-    def __setitem__(self, key: ClientId, value: Union[str, None]):
-        if key == ClientId.GROUND_FLOOR:
-            self.ground_floor = value
-        elif key == ClientId.FIRST_FLOOR:
-            self.first_floor = value
-        elif key == ClientId.SECOND_FLOOR:
-            self.second_floor = value
-        else:
-            raise KeyError(f"Invalid key {key}")
+    async def get_item(self, key: ClientId) -> Union[str, None]:
+        async with self.lock:
+            if key == ClientId.GROUND_FLOOR.value:
+                return self._ground_floor
+            elif key == ClientId.FIRST_FLOOR.value:
+                return self._first_floor
+            elif key == ClientId.SECOND_FLOOR.value:
+                return self._second_floor
+            else:
+                raise KeyError(f"Invalid key {key}")
+
+    async def set_item(self, key: ClientId, value: Union[str, None]):
+        async with self.lock:
+            if key == ClientId.GROUND_FLOOR:
+                self._ground_floor = value
+            elif key == ClientId.FIRST_FLOOR:
+                self._first_floor = value
+            elif key == ClientId.SECOND_FLOOR:
+                self._second_floor = value
+            else:
+                raise KeyError(f"Invalid key {key}")
 
 
 class Car:
     def __init__(self, id: int, arrived_at: int):
-        self.id = id
-        self.arrived_at = arrived_at
+        self._id = id
+        self._arrived_at = arrived_at
 
     def calculate_fee(self, left_at: int) -> float:
         # 0.1$ per minute
-        return (left_at - self.arrived_at) // 60 * 0.1
+        return (left_at - self._arrived_at) // 60 * 0.1
 
 
 class ParkingSpaceType(Enum):
@@ -75,79 +80,84 @@ class ParkingSpaceType(Enum):
 
 class ParkingSpace:
     def __init__(self, space_type: ParkingSpaceType):
-        self.space_type: ParkingSpaceType = space_type
-        self.car: Union[Car, None] = None
+        self._space_type: ParkingSpaceType = space_type
+        self._car: Union[Car, None] = None
 
     def park(self, car: Car):
-        if self.car is not None:
+        if self._car is not None:
             raise ValueError("Parking space is already occupied")
 
-        self.car = car
+        self._car = car
 
     def unpark(self) -> Car:
-        car = self.car
+        car = self._car
 
         if car is None:
             raise ValueError("Parking space is already empty")
 
-        self.car = None
+        self._car = None
         return car
 
     def is_empty(self) -> bool:
-        return self.car is None
+        return self._car is None
 
 
 class ParkingFloor:
     def __init__(self):
-        self.spaces: list[ParkingSpace] = []
+        self._spaces: list[ParkingSpace] = []
+        self._number_of_cars = 0
 
-        self.lock = asyncio.Lock()
-        self.number_of_cars = 0
-
-        self.spaces.append(ParkingSpace(ParkingSpaceType.HANDICAPPED))
+        self._spaces.append(ParkingSpace(ParkingSpaceType.HANDICAPPED))
 
         for _ in range(2):
-            self.spaces.append(ParkingSpace(ParkingSpaceType.Elderly))
+            self._spaces.append(ParkingSpace(ParkingSpaceType.Elderly))
 
         for _ in range(5):
-            self.spaces.append(ParkingSpace(ParkingSpaceType.NORMAL))
+            self._spaces.append(ParkingSpace(ParkingSpaceType.NORMAL))
 
-    async def park(self, car: Car, space: int):
-        async with self.lock:
-            self.spaces[space].park(car)
-            self.number_of_cars += 1
+    def park(self, car: Car, space: int):
+        self._spaces[space].park(car)
+        self._number_of_cars += 1
 
-    async def unpark(self, space: int) -> Car:
-        async with self.lock:
-            car = self.spaces[space].unpark()
-            self.number_of_cars -= 1
-            return car
+    def unpark(self, space: int) -> Car:
+        car = self._spaces[space].unpark()
+        self._number_of_cars -= 1
+        return car
 
     def is_full(self) -> bool:
-        return self.number_of_cars == 8
+        return self._number_of_cars == 8
 
 
 class ParkingLot:
     def __init__(self):
-        self.floors: list[ParkingFloor] = [
+        self._floors: list[ParkingFloor] = [
             ParkingFloor(),
             ParkingFloor(),
             ParkingFloor(),
         ]
 
-        self.number_of_cars = 0
-        self.lock = asyncio.Lock()
+        self._number_of_cars = 0
+        self._lock = asyncio.Lock()
 
     async def park(self, car: Car, floor: int, space: int):
-        async with self.lock:
-            await self.floors[floor].park(car, space)
-            self.number_of_cars += 1
+        async with self._lock:
+            self._floors[floor].park(car, space)
+            self._number_of_cars += 1
 
     async def unpark(self, floor: int, space: int) -> Car:
-        async with self.lock:
-            car = await self.floors[floor].unpark(space)
-            self.number_of_cars -= 1
+        async with self._lock:
+            car = self._floors[floor].unpark(space)
+            self._number_of_cars -= 1
             return car
 
-    def is_full(self) -> bool:
-        return self.number_of_cars == 24
+    async def is_full(self) -> bool:
+        async with self._lock:
+            return self._number_of_cars == 24
+
+    async def is_floor_full(self, floor: int) -> bool:
+        async with self._lock:
+            return self._floors[floor].is_full()
+
+    async def get_floor_as_bool_array(self, floor) -> list[bool]:
+        async with self._lock:
+            return [space.is_empty() for space in self._floors[floor]._spaces]
