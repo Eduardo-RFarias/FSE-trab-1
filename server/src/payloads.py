@@ -1,4 +1,4 @@
-from server.src.models import ClientId
+from .models import ClientId
 
 
 class ParkingSpaceModifiedPayload:
