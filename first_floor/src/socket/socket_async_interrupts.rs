@@ -31,7 +31,6 @@ pub fn set_parking_lot_state_signal(
         let spaces: Vec<bool>;
 
         if let Payload::Text(data) = payload {
-            println!("{:?}", data[0].to_string());
             spaces = serde_json::from_str(&data[0].to_string()).unwrap();
         } else {
             panic!("Payload is not text");

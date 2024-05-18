@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter, Result};
 
-#[derive(Deserialize, Serialize, Copy, Clone)]
+#[derive(Deserialize, Serialize, PartialEq, Copy, Clone)]
 pub enum ClientId {
     GroundFloor,
     FirstFloor,

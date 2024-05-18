@@ -68,12 +68,24 @@ pub fn handle_disconnect(socket: &SocketRef, database: Arc<Mutex<Database>>) {
 pub async fn send_parking_lot_state(socket: &SocketRef, database: Arc<Mutex<Database>>) {
     let database = database.lock().unwrap();
     let client_id = database.clients.get(&socket.id.to_string()).unwrap();
-    let floor = database.parking_lot.floors[client_id.to_index()].as_bool_vec();
+    let floor = &database.parking_lot.floors[client_id.to_index()];
 
     socket
         .within(client_id.to_string())
-        .emit(PARKING_LOT_STATE_EVENT, vec![floor])
+        .emit(PARKING_LOT_STATE_EVENT, vec![floor.as_bool_vec()])
         .unwrap();
+
+    if *client_id == ClientId::GroundFloor && database.parking_lot.is_full() {
+        socket
+            .within(client_id.to_string())
+            .emit(CLOSE_PARKING_LOT_EVENT, ())
+            .unwrap();
+    } else if floor.is_full() {
+        socket
+            .within(client_id.to_string())
+            .emit(CLOSE_FLOOR_EVENT, ())
+            .unwrap();
+    }
 }
 
 pub fn handle_car_arrived(socket: &SocketRef, database: Arc<Mutex<Database>>) {

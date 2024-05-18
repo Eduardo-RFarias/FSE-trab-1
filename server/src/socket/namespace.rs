@@ -12,6 +12,7 @@ pub fn configure_socket_namespace(io: &SocketIo) {
         let conn_was_saved = save_connection(&socket, database.clone()).await;
 
         if conn_was_saved {
+            // Send the parking lot state to the client that just connected (or reconnected)
             send_parking_lot_state(&socket, database.clone()).await;
         } else {
             socket.disconnect().unwrap();
