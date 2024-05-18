@@ -17,9 +17,7 @@ pub struct GpioPins {
 }
 
 impl GpioPins {
-    pub fn new() -> Self {
-        let gpio = Gpio::new().unwrap();
-
+    pub fn new(gpio: &Gpio) -> Self {
         GpioPins {
             pass_through_sensor_1: gpio.get(16).unwrap().into_input_pulldown(),
             pass_through_sensor_2: gpio.get(21).unwrap().into_input_pulldown(),
