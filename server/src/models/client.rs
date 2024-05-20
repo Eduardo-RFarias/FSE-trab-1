@@ -18,7 +18,7 @@ impl ClientId {
         }
     }
 
-    pub fn to_index(&self) -> usize {
+    pub fn to_index(&self) -> i32 {
         match self {
             Self::GroundFloor => 0,
             Self::FirstFloor => 1,

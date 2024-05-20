@@ -1,8 +1,7 @@
+use crate::socket::constants::SERVER_ADDRESS;
 use axum::{self, Router};
 use socketioxide::layer::SocketIoLayer;
 use tokio::{net::TcpListener, signal};
-
-use crate::socket::constants::SERVER_ADDRESS;
 
 pub async fn configure_axum_server(layer: SocketIoLayer) {
     let app = Router::new().layer(layer);

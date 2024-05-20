@@ -1,2 +1,3 @@
 .bin/
 .vscode/
+**/parking_lot.db

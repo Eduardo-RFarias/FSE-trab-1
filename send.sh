@@ -21,8 +21,13 @@ fi
 
 echo "Creating the fse folder on the Raspberry Pi..."
 
-# Create the fse folder if it doesn't exist and delete it if it does
-sshpass -e ssh eduardofarias@164.41.98.16 -p 13508 "if [ -d ~/fse ]; then rm -r ~/fse; fi; mkdir ~/fse"
+# Create or replace the fse folder on the Raspberry Pi
+sshpass -e ssh eduardofarias@164.41.98.16 -p 13508 "
+  if [ -d ~/fse ]; then
+    rm -rf ~/fse
+  fi
+  mkdir ~/fse
+"
 
 echo "Sending the .bin folder to the Raspberry Pi..."
 

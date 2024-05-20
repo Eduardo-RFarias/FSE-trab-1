@@ -5,12 +5,9 @@ use super::{
     },
     payloads::ParkingSpaceModifiedPayload,
 };
-use crate::{
-    database::Database,
-    models::{client::ClientId, parking_lot::Vehicle},
-};
+use crate::{database::Database, models::client::ClientId};
 use socketioxide::extract::{Data, SocketRef};
-use std::sync::{atomic::Ordering::SeqCst, Arc, Mutex};
+use std::sync::{Arc, Mutex};
 
 pub async fn save_connection(socket: &SocketRef, database: Arc<Mutex<Database>>) -> bool {
     // When a client connects, we need to check if it has a client_id header
@@ -68,19 +65,20 @@ pub fn handle_disconnect(socket: &SocketRef, database: Arc<Mutex<Database>>) {
 pub async fn send_parking_lot_state(socket: &SocketRef, database: Arc<Mutex<Database>>) {
     let database = database.lock().unwrap();
     let client_id = database.clients.get(&socket.id.to_string()).unwrap();
-    let floor = &database.parking_lot.floors[client_id.to_index()];
+    let floor_number = client_id.to_index();
+    let floor = database.get_floor(floor_number).unwrap();
 
     socket
         .within(client_id.to_string())
         .emit(PARKING_LOT_STATE_EVENT, vec![floor.as_bool_vec()])
         .unwrap();
 
-    if *client_id == ClientId::GroundFloor && database.parking_lot.is_full() {
+    if *client_id == ClientId::GroundFloor && database.parking_lot_is_full().unwrap() {
         socket
             .within(client_id.to_string())
             .emit(CLOSE_PARKING_LOT_EVENT, ())
             .unwrap();
-    } else if floor.is_full() {
+    } else if database.floor_is_full(floor_number).unwrap() {
         socket
             .within(client_id.to_string())
             .emit(CLOSE_FLOOR_EVENT, ())
@@ -93,21 +91,16 @@ pub fn handle_car_arrived(socket: &SocketRef, database: Arc<Mutex<Database>>) {
         CAR_ARRIVED_EVENT,
         move |socket: SocketRef, Data(payload): Data<ParkingSpaceModifiedPayload>| async move {
             let mut database = database.lock().unwrap();
-
-            // create a new vehicle instance
-            let vehicle = Vehicle {
-                id: database.id_counter.fetch_add(1, SeqCst),
-                entry_time: payload.timestamp,
-            };
+            let client_id = *database.clients.get(&socket.id.to_string()).unwrap();
+            let floor_number = client_id.to_index();
 
             // park the new car in the respective floor and parking space
-            let client_id = *database.clients.get(&socket.id.to_string()).unwrap();
-            let floor = &mut database.parking_lot.floors[client_id.to_index()];
-
-            floor.spots[payload.parking_space as usize].park(vehicle);
+            database
+                .park_vehicle(payload.timestamp, floor_number, payload.parking_space)
+                .unwrap();
 
             // if the floor filled up, close the floor
-            if floor.is_full() {
+            if database.floor_is_full(floor_number).unwrap() {
                 socket
                     .within(client_id.to_string())
                     .emit(CLOSE_FLOOR_EVENT, ())
@@ -115,7 +108,7 @@ pub fn handle_car_arrived(socket: &SocketRef, database: Arc<Mutex<Database>>) {
             }
 
             // if the parking lot filled up, close the parking lot
-            if database.parking_lot.is_full() {
+            if database.parking_lot_is_full().unwrap() {
                 socket
                     .within(ClientId::GroundFloor.to_string())
                     .emit(CLOSE_PARKING_LOT_EVENT, ())
@@ -132,7 +125,7 @@ pub fn handle_car_departed(socket: &SocketRef, database: Arc<Mutex<Database>>) {
             let mut database = database.lock().unwrap();
 
             // If the parking lot is full, open it
-            if database.parking_lot.is_full() {
+            if database.parking_lot_is_full().unwrap() {
                 socket
                     .within(ClientId::GroundFloor.to_string())
                     .emit(OPEN_PARKING_LOT_EVENT, ())
@@ -141,9 +134,9 @@ pub fn handle_car_departed(socket: &SocketRef, database: Arc<Mutex<Database>>) {
 
             // If the floor is full, open it
             let client_id = *database.clients.get(&socket.id.to_string()).unwrap();
-            let floor = &mut database.parking_lot.floors[client_id.to_index()];
+            let floor_number = client_id.to_index();
 
-            if floor.is_full() {
+            if database.floor_is_full(floor_number).unwrap() {
                 socket
                     .within(client_id.to_string())
                     .emit(OPEN_FLOOR_EVENT, ())
@@ -151,19 +144,13 @@ pub fn handle_car_departed(socket: &SocketRef, database: Arc<Mutex<Database>>) {
             }
 
             // Remove the vehicle from the parking space and calculate the fee
-            let vehicle = floor.spots[payload.parking_space as usize].unpark();
+            let vehicle = database
+                .unpark_vehicle(floor_number, payload.parking_space)
+                .unwrap();
 
-            if let Some(vehicle) = vehicle {
-                let fee = vehicle.calculate_fee(payload.timestamp);
-
-                // Emit the fee to the client
-                println!("Vehicle {} paid a fee of {}", vehicle.id, fee);
-            } else {
-                panic!(
-                    "Client {} tried to depart a vehicle from empty parking space {}",
-                    client_id, payload.parking_space
-                );
-            }
+            // Emit the fee to the client
+            let fee = vehicle.calculate_fee(payload.timestamp);
+            println!("Vehicle {} paid a fee of {}", vehicle.id, fee);
         },
     )
 }
