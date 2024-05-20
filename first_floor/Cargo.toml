@@ -3,13 +3,11 @@ name = "fse_trab_1_first_floor"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 chrono = "0.4.38"
 ctrlc = "3.4.4"
 openssl = { version = "0.10.64", features = ["vendored"] }
 rppal = "0.17.1"
-rust_socketio = { version = "0.6.0", features = ["async"] }
-serde = { version = "1.0.201", features = ["derive"] }
+rust_socketio = "0.6.0"
+serde = "1.0.201"
 serde_json = "1.0.117"

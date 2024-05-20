@@ -1,7 +1,5 @@
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ValueRef};
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
 pub struct Floor {
     pub floor_number: i32,
     pub spots: Vec<Spot>,
@@ -16,14 +14,13 @@ impl Floor {
     }
 }
 
-#[derive(Serialize, Deserialize)]
 pub struct Spot {
     pub spot_number: i32,
     pub spot_type: SpotType,
     pub parked_vehicle: Option<Vehicle>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum SpotType {
     Normal = 0,
     Handicapped = 1,
@@ -43,7 +40,6 @@ impl FromSql for SpotType {
     }
 }
 
-#[derive(Serialize, Deserialize)]
 pub struct Vehicle {
     pub id: i32,
     pub entry_time: i64,

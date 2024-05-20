@@ -9,6 +9,5 @@ edition = "2021"
 axum = "0.7.5"
 rusqlite = { version = "0.31.0", features = ["bundled"] }
 serde = "1.0.202"
-serde_json = "1.0.117"
 socketioxide = "0.13.1"
 tokio = { version = "1.37.0", features = ["full"] }

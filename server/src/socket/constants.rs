@@ -1,4 +1,4 @@
-pub const SERVER_ADDRESS: &str = "localhost:10380";
+pub const SERVER_ADDRESS: &str = "0.0.0.0:10380";
 pub const CLIENT_ID_HEADER: &str = "x-client-id";
 pub const PARKING_LOT_STATE_EVENT: &str = "parking_lot_state";
 pub const CLOSE_PARKING_LOT_EVENT: &str = "close_parking_lot";

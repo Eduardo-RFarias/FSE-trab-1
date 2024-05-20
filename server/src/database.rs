@@ -10,7 +10,7 @@ use std::{
 };
 
 pub struct Database {
-    pub connection: Connection,
+    connection: Connection,
     pub clients: HashMap<String, ClientId>,
 }
 
@@ -59,8 +59,8 @@ impl Database {
                 );
                 
                 CREATE TABLE parking_spot (
-                    floor_number INTEGER NOT NULL,
-                    spot_number INTEGER NOT NULL,
+                    floor_number INTEGER NOT NULL CHECK (floor_number IN (0, 1, 2)),
+                    spot_number INTEGER NOT NULL CHECK (spot_number IN (0, 1, 2, 3, 4, 5, 6, 7)),
                     spot_type INTEGER NOT NULL CHECK (spot_type IN (0, 1, 2)),
                     parked_vehicle_id INTEGER UNIQUE,
                     PRIMARY KEY (floor_number, spot_number),
