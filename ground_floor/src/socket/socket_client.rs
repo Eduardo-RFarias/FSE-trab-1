@@ -6,6 +6,8 @@ use crate::socket::socket_async_interrupts::{
 use crate::socket::socket_operations::{CLIENT_HEADER, SERVER_URL};
 use rust_socketio::{client::Client, ClientBuilder};
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 
 pub fn new_client(
     gpio_pins: &GpioPins,
@@ -27,8 +29,20 @@ pub fn new_client(
     client = set_parking_lot_state_signal(client, parking_lot);
 
     // Connecting to the server
-    let client = client.connect().unwrap();
+    for _ in 0..10 {
+        let connection = client.clone();
 
-    // Returning the client
-    Arc::new(Mutex::new(client))
+        match connection.connect() {
+            Ok(connection) => {
+                return Arc::new(Mutex::new(connection));
+            }
+            Err(_) => {
+                println!("Error connecting to the server. Retrying...");
+            }
+        }
+
+        thread::sleep(Duration::from_secs(1));
+    }
+
+    panic!("Could not connect to the server");
 }

@@ -19,13 +19,13 @@ pub struct GpioPins {
 impl GpioPins {
     pub fn new(gpio: &Gpio) -> Self {
         GpioPins {
-            pass_through_sensor_1: gpio.get(16).unwrap().into_input_pulldown(),
-            pass_through_sensor_2: gpio.get(21).unwrap().into_input_pulldown(),
-            space_address_1: Arc::new(Mutex::new(gpio.get(13).unwrap().into_output_low())),
-            space_address_2: Arc::new(Mutex::new(gpio.get(6).unwrap().into_output_low())),
-            space_address_3: Arc::new(Mutex::new(gpio.get(5).unwrap().into_output_low())),
-            space_sensor: Arc::new(Mutex::new(gpio.get(20).unwrap().into_input_pulldown())),
-            closed_signal: Arc::new(Mutex::new(gpio.get(8).unwrap().into_output_low())),
+            pass_through_sensor_1: gpio.get(0).unwrap().into_input_pulldown(),
+            pass_through_sensor_2: gpio.get(7).unwrap().into_input_pulldown(),
+            space_address_1: Arc::new(Mutex::new(gpio.get(9).unwrap().into_output_low())),
+            space_address_2: Arc::new(Mutex::new(gpio.get(11).unwrap().into_output_low())),
+            space_address_3: Arc::new(Mutex::new(gpio.get(15).unwrap().into_output_low())),
+            space_sensor: Arc::new(Mutex::new(gpio.get(1).unwrap().into_input_pulldown())),
+            closed_signal: Arc::new(Mutex::new(gpio.get(14).unwrap().into_output_low())),
             pass_through_sensor_1_level: Arc::new(Mutex::new(Level::Low)),
             pass_through_sensor_2_level: Arc::new(Mutex::new(Level::Low)),
         }
