@@ -312,4 +312,15 @@ impl Database {
 
         Ok(num_of_cars >= 8)
     }
+
+    pub fn reset_parking_lot(&mut self) -> Result<(), Error> {
+        let tx = self.connection.transaction()?;
+
+        tx.execute("UPDATE parking_spot SET parked_vehicle_id = NULL;", [])?;
+        tx.execute("DELETE FROM vehicle;", [])?;
+
+        tx.commit()?;
+
+        Ok(())
+    }
 }

@@ -1,0 +1,12 @@
+[package]
+name = "fse_trab_1_app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ctrlc = "3.4.4"
+openssl = { version = "0.10.64", features = ["vendored"] }
+rust_socketio = "0.6.0"
+serde = "1.0.202"
+serde_json = "1.0.117"
+text_io = "0.1.12"

@@ -2,6 +2,7 @@ use super::{
     constants::{
         CAR_ARRIVED_EVENT, CAR_DEPARTED_EVENT, CLIENT_ID_HEADER, CLOSE_FLOOR_EVENT,
         CLOSE_PARKING_LOT_EVENT, OPEN_FLOOR_EVENT, OPEN_PARKING_LOT_EVENT, PARKING_LOT_STATE_EVENT,
+        RESET_DATABASE_EVENT,
     },
     payloads::ParkingSpaceModifiedPayload,
 };
@@ -153,4 +154,86 @@ pub fn handle_car_departed(socket: &SocketRef, database: Arc<Mutex<Database>>) {
             println!("Vehicle {} paid a fee of {}", vehicle.id, fee);
         },
     )
+}
+
+pub fn handle_close_parking_lot(socket: &SocketRef) {
+    socket.on(
+        CLOSE_PARKING_LOT_EVENT,
+        move |socket: SocketRef| async move {
+            socket
+                .within(ClientId::GroundFloor.to_string())
+                .emit(CLOSE_PARKING_LOT_EVENT, ())
+                .unwrap();
+        },
+    );
+}
+
+pub fn handle_close_floor(socket: &SocketRef) {
+    socket.on(
+        CLOSE_FLOOR_EVENT,
+        move |socket: SocketRef, Data(floor_number): Data<i32>| async move {
+            let floor = ClientId::from_index(floor_number).unwrap();
+
+            socket
+                .within(floor.to_string())
+                .emit(CLOSE_FLOOR_EVENT, ())
+                .unwrap();
+        },
+    );
+}
+
+pub fn handle_open_parking_lot(socket: &SocketRef) {
+    socket.on(
+        OPEN_PARKING_LOT_EVENT,
+        move |socket: SocketRef| async move {
+            socket
+                .within(ClientId::GroundFloor.to_string())
+                .emit(OPEN_PARKING_LOT_EVENT, ())
+                .unwrap();
+        },
+    );
+}
+
+pub fn handle_open_floor(socket: &SocketRef) {
+    socket.on(
+        OPEN_FLOOR_EVENT,
+        move |socket: SocketRef, Data(floor_number): Data<i32>| async move {
+            let floor = ClientId::from_index(floor_number).unwrap();
+
+            socket
+                .within(floor.to_string())
+                .emit(OPEN_FLOOR_EVENT, ())
+                .unwrap();
+        },
+    );
+}
+
+pub fn handle_reset_database(socket: &SocketRef, database: Arc<Mutex<Database>>) {
+    socket.on(RESET_DATABASE_EVENT, move |socket: SocketRef| async move {
+        let mut database = database.lock().unwrap();
+
+        // Reset the database
+        database.reset_parking_lot().unwrap();
+
+        // For each floor
+        for client_id in ClientId::iter_floors() {
+            // Emit the parking lot state event with all parking spaces empty
+            socket
+                .within(client_id.to_string())
+                .emit(PARKING_LOT_STATE_EVENT, vec![false; 8])
+                .unwrap();
+
+            // After that, emit the open floor event to open the floor
+            socket
+                .within(client_id.to_string())
+                .emit(OPEN_FLOOR_EVENT, ())
+                .unwrap();
+        }
+
+        // Emit the open parking lot event to open the parking lot
+        socket
+            .within(ClientId::GroundFloor.to_string())
+            .emit(OPEN_PARKING_LOT_EVENT, ())
+            .unwrap();
+    });
 }
