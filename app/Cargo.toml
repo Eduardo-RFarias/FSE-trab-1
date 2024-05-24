@@ -9,4 +9,4 @@ openssl = { version = "0.10.64", features = ["vendored"] }
 rust_socketio = "0.6.0"
 serde = "1.0.202"
 serde_json = "1.0.117"
-text_io = "0.1.12"
+termion = "4.0.0"
