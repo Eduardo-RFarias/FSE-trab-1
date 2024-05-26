@@ -1,7 +1,7 @@
 use crate::gpio::gpio_pins::GpioPins;
 use crate::model::ParkingLot;
 use crate::socket::socket_async_interrupts::{
-    set_close_parking_lot_signal, set_open_parking_lot_signal, set_parking_lot_state_signal,
+    set_close_parking_lot_signal, set_floor_state_signal, set_open_parking_lot_signal,
 };
 use crate::socket::socket_operations::{CLIENT_HEADER, SERVER_URL};
 use rust_socketio::{client::Client, ClientBuilder};
@@ -26,7 +26,7 @@ pub fn new_client(
     client = set_open_parking_lot_signal(client, gpio_pins);
 
     // Setting up the parking lot state signal
-    client = set_parking_lot_state_signal(client, parking_lot);
+    client = set_floor_state_signal(client, parking_lot);
 
     // Connecting to the server
     for _ in 0..10 {

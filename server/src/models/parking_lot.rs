@@ -27,6 +27,16 @@ pub enum SpotType {
     Elderly = 2,
 }
 
+impl From<SpotType> for i32 {
+    fn from(spot_type: SpotType) -> i32 {
+        match spot_type {
+            SpotType::Normal => 0,
+            SpotType::Handicapped => 1,
+            SpotType::Elderly => 2,
+        }
+    }
+}
+
 impl FromSql for SpotType {
     fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
         let number = value.as_i64()?;
@@ -43,11 +53,4 @@ impl FromSql for SpotType {
 pub struct Vehicle {
     pub id: i32,
     pub entry_time: i64,
-}
-
-impl Vehicle {
-    pub fn calculate_fee(&self, exit_time: i64) -> f64 {
-        let duration_in_minutes = (exit_time - self.entry_time) / 60;
-        duration_in_minutes as f64 * 0.1
-    }
 }

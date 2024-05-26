@@ -20,7 +20,7 @@ pub fn close_parking_lot(client: &Arc<Mutex<Client>>, stdout: &Arc<Mutex<RawTerm
         .emit(CLOSE_PARKING_LOT_EVENT, json!(()))
         .unwrap();
 
-    menus::feedback(stdout, "Sent order to close parking lot.");
+    menus::feedback(stdout, "Ordem de fechamento de estacionamento enviada.");
 }
 
 pub fn close_floor(client: &Arc<Mutex<Client>>, stdout: &Arc<Mutex<RawTerminal<Stdout>>>) {
@@ -57,7 +57,7 @@ pub fn close_floor(client: &Arc<Mutex<Client>>, stdout: &Arc<Mutex<RawTerminal<S
     menus::main_menu(stdout);
 
     if choice != -1 {
-        menus::feedback(stdout, "Sent order to close floor.");
+        menus::feedback(stdout, "Ordem de fechamento de andar enviada.");
     }
 }
 
@@ -68,7 +68,7 @@ pub fn open_parking_lot(client: &Arc<Mutex<Client>>, stdout: &Arc<Mutex<RawTermi
         .emit(OPEN_PARKING_LOT_EVENT, json!(()))
         .unwrap();
 
-    menus::feedback(stdout, "Sent order to open parking lot.");
+    menus::feedback(stdout, "Ordem de abertura de estacionamento enviada.");
 }
 
 pub fn open_floor(client: &Arc<Mutex<Client>>, stdout: &Arc<Mutex<RawTerminal<Stdout>>>) {
@@ -105,7 +105,7 @@ pub fn open_floor(client: &Arc<Mutex<Client>>, stdout: &Arc<Mutex<RawTerminal<St
     menus::main_menu(stdout);
 
     if choice != -1 {
-        menus::feedback(stdout, "Sent order to open floor.");
+        menus::feedback(stdout, "Ordem de abertura de andar enviada.");
     }
 }
 
@@ -116,5 +116,5 @@ pub fn reset_database(client: &Arc<Mutex<Client>>, stdout: &Arc<Mutex<RawTermina
         .emit(RESET_DATABASE_EVENT, json!(()))
         .unwrap();
 
-    menus::feedback(stdout, "Sent order to reset database.");
+    menus::feedback(stdout, "Ordem de reset de dados enviada.");
 }

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+chrono = "0.4.38"
 ctrlc = "3.4.4"
 openssl = { version = "0.10.64", features = ["vendored"] }
 rust_socketio = "0.6.0"

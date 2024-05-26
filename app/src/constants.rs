@@ -14,6 +14,9 @@ pub const CLOSE_FLOOR_EVENT: &str = "close_floor";
 pub const OPEN_PARKING_LOT_EVENT: &str = "open_parking_lot";
 pub const OPEN_FLOOR_EVENT: &str = "open_floor";
 pub const RESET_DATABASE_EVENT: &str = "reset_database";
+pub const PARKING_LOT_STATE_EVENT: &str = "parking_lot_state";
 
-pub const MENU_POS: (u16, u16) = (1, 1);
-pub const FEEDBACK_POS: (u16, u16) = (1, 9);
+pub const DASHBOARD_POS: (u16, u16) = (1, 1);
+pub const DASHBOARD_INFO_COLUMN: u16 = 86;
+pub const MENU_POS: (u16, u16) = (1, 9);
+pub const FEEDBACK_POS: (u16, u16) = (1, 18);

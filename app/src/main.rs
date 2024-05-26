@@ -1,9 +1,12 @@
 mod constants;
 mod ctrlc_handler;
+mod dashboard_pooling;
 mod menus;
+mod models;
 mod operations;
 mod socket_client;
 
+use crate::models::ParkingLotDataPayload;
 use std::{
     io::{stdin, stdout},
     sync::{Arc, Mutex},
@@ -11,11 +14,14 @@ use std::{
 use termion::{event::Key, input::TermRead, raw::IntoRawMode};
 
 fn main() {
-    let client = socket_client::create();
-
     let stdin = stdin();
     let stdout = Arc::new(Mutex::new(stdout().into_raw_mode().unwrap()));
 
+    let parking_lot = Arc::new(Mutex::new(ParkingLotDataPayload::new()));
+
+    let client = socket_client::create(stdout.clone(), parking_lot.clone());
+
+    dashboard_pooling::set(stdout.clone(), parking_lot.clone());
     ctrlc_handler::set(client.clone(), stdout.clone());
 
     menus::init_console(&stdout);
