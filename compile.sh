@@ -13,6 +13,10 @@ cd server
 cross build --release --target armv7-unknown-linux-musleabihf
 cp target/armv7-unknown-linux-musleabihf/release/fse_trab_1_server ../.bin/fse_trab_1_server
 
+cd ../app
+cross build --release --target armv7-unknown-linux-musleabihf
+cp target/armv7-unknown-linux-musleabihf/release/fse_trab_1_app ../.bin/fse_trab_1_app
+
 cd ../ground_floor
 cross build --release --target armv7-unknown-linux-musleabihf
 cp target/armv7-unknown-linux-musleabihf/release/fse_trab_1_ground_floor ../.bin/fse_trab_1_ground_floor
